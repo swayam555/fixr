@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package fixr.v1;
+
+option go_package = "fixr.in/svc/gen/fixr/v1;fixrv1";
+
+// One GPS fix from the Partner app. Batched because radios are expensive: one HTTP call per ~10 fixes.
+message LocationPoint {
+  double lat = 1;
+  double lng = 2;
+  float accuracy_m = 3;
+  float speed_mps = 4;      // -1 when unknown
+  float bearing_deg = 5;    // -1 when unknown
+  int64 recorded_at_ms = 6; // device clock, epoch ms
+  ActivityKind activity = 7;
+  uint32 battery_pct = 8;
+}
+
+enum ActivityKind {
+  ACTIVITY_UNKNOWN = 0;
+  ACTIVITY_STILL = 1;
+  ACTIVITY_WALKING = 2;
+  ACTIVITY_VEHICLE = 3;
+}
+
+message LocationBatch {
+  string batch_id = 1;          // client UUID; ingest dedupes on it
+  repeated LocationPoint points = 2;
+  FrequencyMode mode = 3;
+}
+
+enum FrequencyMode {
+  MODE_UNKNOWN = 0;
+  MODE_EN_ROUTE = 1;
+  MODE_ON_JOB = 2;
+  MODE_IDLE = 3;
+  MODE_STATIONARY = 4;
+}
+
+message BatchAck {
+  string batch_id = 1;
+  uint32 accepted = 2;
+  uint32 rejected = 3;
+  bool duplicate = 4;
+}
+
+// Kafka value on `pro.locations`, key = pro_id.
+message ProLocation {
+  string pro_id = 1;
+  double lat = 2;
+  double lng = 3;
+  float accuracy_m = 4;
+  float speed_mps = 5;
+  float bearing_deg = 6;
+  int64 recorded_at_ms = 7;
+  int64 received_at_ms = 8;
+  ActivityKind activity = 9;
+  FrequencyMode mode = 10;
+}

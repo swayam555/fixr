@@ -1,0 +1,26 @@
+{
+  "name": "fixr",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.21.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=@fixr/customer --filter=@fixr/partner",
+    "dev:customer": "pnpm --filter @fixr/customer dev",
+    "dev:partner": "pnpm --filter @fixr/partner dev",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "proto": "pnpm --filter @fixr/proto build"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.16.22",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.5.2",
+    "turbo": "^2.11.12",
+    "typescript": "~6.0.3"
+  }
+}
