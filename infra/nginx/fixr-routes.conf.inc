@@ -7,6 +7,11 @@ location = /api/auth/otp {
   proxy_pass http://order_service;
 }
 
+location /api/payments/ {
+  limit_req zone=api burst=20 nodelay;
+  proxy_pass http://payments_service;
+}
+
 location /api/ {
   limit_req zone=api burst=80 nodelay;
   proxy_pass http://order_service;

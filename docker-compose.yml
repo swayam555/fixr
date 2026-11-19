@@ -10,6 +10,23 @@ x-otel: &otel
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
 
+x-go: &go
+  <<: *svc
+  mem_limit: 64m
+  environment: &goenv
+    <<: *otel
+    REDIS_ADDR: redis:6379
+    KAFKA_BOOTSTRAP: kafka:9092
+    JWKS_URL: http://order-service:8080/.well-known/jwks.json
+    LOG_LEVEL: info
+  depends_on: &godeps
+    redis: { condition: service_healthy }
+    kafka-init: { condition: service_completed_successfully }
+  healthcheck:
+    test: ["CMD", "/app", "-healthcheck"]
+    interval: 5s
+    retries: 20
+
 services:
   init:
     image: alpine/openssl:3.5.9
@@ -120,6 +137,69 @@ services:
       interval: 5s
       start_period: 40s
       retries: 30
+
+  location-ingest:
+    <<: *go
+    build: { context: ./services/go, args: { SVC: location-ingest } }
+    image: fixr/location-ingest:dev
+    deploy: { replicas: 2 }
+    environment: { <<: *goenv, ADDR: ":8091" }
+
+  location-processor:
+    <<: *go
+    build: { context: ./services/go, args: { SVC: location-processor, CGO: "1" } }
+    image: fixr/location-processor:dev
+    environment: { <<: *goenv, ADDR: ":8094" }
+
+  dispatch-service:
+    <<: *go
+    build: { context: ./services/go, args: { SVC: dispatch-service } }
+    image: fixr/dispatch-service:dev
+    deploy: { replicas: 2 }
+    environment: { <<: *goenv, ADDR: ":8092", ETA_URL: http://ai-service:8000/ai/eta }
+
+  realtime-gateway:
+    <<: *go
+    build: { context: ./services/go, args: { SVC: realtime-gateway } }
+    image: fixr/realtime-gateway:dev
+    deploy: { replicas: 2 }
+    environment: { <<: *goenv, ADDR: ":8090", WS_ORIGINS: "localhost:*,127.0.0.1:*,10.0.2.2:*" }
+
+  notifier:
+    <<: *go
+    build: { context: ./services/go, args: { SVC: notifier } }
+    image: fixr/notifier:dev
+    environment: { <<: *goenv, ADDR: ":8095" }
+
+  payments-service:
+    <<: *go
+    build: { context: ./services/go, args: { SVC: payments-service } }
+    image: fixr/payments-service:dev
+    deploy: { replicas: 2 }
+    environment:
+      <<: *goenv
+      ADDR: ":8093"
+      DATABASE_URL: postgres://fixr:${DB_PASSWORD:-fixr}@postgres:5432/fixr?pool_max_conns=6
+      RAZORPAY_BASE: ${RAZORPAY_BASE:-http://razorpay-local:8097}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-rzp_test_local}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-local-key-secret}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-local-webhook-secret}
+    depends_on:
+      <<: *godeps
+      postgres: { condition: service_healthy }
+
+  razorpay-local:
+    <<: *go
+    build: { context: ./services/go, args: { SVC: razorpay-local } }
+    image: fixr/razorpay-local:dev
+    ports: ["8097:8097"]
+    environment:
+      ADDR: ":8097"
+      WEBHOOK_URL: http://nginx/pay/webhook
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-local-key-secret}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-local-webhook-secret}
+      DUPLICATE_WEBHOOKS: ${DUPLICATE_WEBHOOKS:-true}
+    depends_on: {}
 
   nginx:
     <<: *svc

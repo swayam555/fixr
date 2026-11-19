@@ -167,6 +167,11 @@ func (e *Engine) ApplyOrderEvent(ctx context.Context, ev OrderEvent) error {
 		if ev.Type == "ORDER_CANCELLED" && p.ProID != "" {
 			e.releasePro(ctx, p.ProID, ev.OrderID, false)
 		}
+	case "ORDER_ASSIGN_REJECTED":
+		// the pro accepted after the order was cancelled or taken: free them without counting a job
+		if p.ProID != "" {
+			e.releasePro(ctx, p.ProID, ev.OrderID, false)
+		}
 	case "ORDER_COMPLETED":
 		if p.ProID != "" {
 			e.releasePro(ctx, p.ProID, ev.OrderID, true)

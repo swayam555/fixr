@@ -8,15 +8,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import in.fixr.order.AbstractIT;
-import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 class AuthFlowIT extends AbstractIT {
-
-    private static String randomPhone() {
-        return "+919" + String.format("%09d", ThreadLocalRandom.current().nextInt(1_000_000_000));
-    }
 
     private String requestOtp(String phone, String role) throws Exception {
         return mvc.perform(post("/api/auth/otp").contentType(MediaType.APPLICATION_JSON)
