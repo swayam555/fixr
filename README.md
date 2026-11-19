@@ -41,3 +41,7 @@ scripts/smoke-auth.sh
 ## Docs
 
 [Build plan](docs/PLAN.md) · [Architecture](docs/ARCHITECTURE.md) · [Changelog](docs/CHANGELOG.md) · [Progress](PROGRESS.md)
+
+## License
+
+MIT. See [LICENSE](LICENSE).
